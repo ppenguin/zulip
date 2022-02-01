@@ -1091,7 +1091,8 @@ stripe==2.61.0 \
     --hash=sha256:8131addd3512a22c4c539dda2d869a8f488e06f1b02d1f3a5f0f4848fc56184e
     # via -r requirements/common.in
 https://github.com/zulip/talon/archive/1711705c952806d4a704c7dbf58f21db8e11756a.zip#egg=talon-core==1.4.8.zulip1&subdirectory=talon-core \
-    --hash=sha256:e562269ba5f5d71f35f3dd7ee4c0c62a6c95dfb41984766eff645425c4dec71e
+    --hash=sha256:e562269ba5f5d71f35f3dd7ee4c0c62a6c95dfb41984766eff645425c4dec71e \
+    --hash=sha256:27ecec23a6b2c5dc75c0ea471af8d392ecce4eeefea3111fb3663635a6240c74
     # via -r requirements/common.in
 tlds==2021110100 \
     --hash=sha256:1b23d9639fd39fa8718d5281f08b406054f12f555c3b741888c895c7d3e21af9 \
@@ -1170,13 +1171,14 @@ zipp==3.6.0 \
     --hash=sha256:9fe5ea21568a0a70e50f273397638d39b03353731e6cbbb3fd8502a33fec40bc
     # via importlib-metadata
 https://github.com/zulip/python-zulip-api/archive/4d482e0ef30297f716885fd8246f4638a856ba3b.zip#egg=zulip==0.7.1+git&subdirectory=zulip \
-    --hash=sha256:be9a556f11e0edbc628689e2f99da3bde893fdd35fa711b6c7d41b4b02fddd78
+    --hash=sha256:be9a556f11e0edbc628689e2f99da3bde893fdd35fa711b6c7d41b4b02fddd78 \
+    --hash=sha256:8f835ec0815d23611836573359d8394ade8314e6819b4af81f066c0ac36cae2f
     # via
     #   -r requirements/common.in
     #   zulip-bots
 https://github.com/zulip/python-zulip-api/archive/4d482e0ef30297f716885fd8246f4638a856ba3b.zip#egg=zulip_bots==0.7.1+git&subdirectory=zulip_bots \
-    --hash=sha256:be9a556f11e0edbc628689e2f99da3bde893fdd35fa711b6c7d41b4b02fddd78
-    # via -r requirements/common.in
+    --hash=sha256:be9a556f11e0edbc628689e2f99da3bde893fdd35fa711b6c7d41b4b02fddd78 \
+    --hash=sha256:8f835ec0815d23611836573359d8394ade8314e6819b4af81f066c0ac36cae2fs
 zxcvbn==4.4.28 \
     --hash=sha256:151bd816817e645e9064c354b13544f85137ea3320ca3be1fb6873ea75ef7dc1
     # via -r requirements/common.in
