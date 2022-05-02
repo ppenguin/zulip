@@ -80,7 +80,6 @@ def do_update_user_presence(
     presence = UserPresence.objects.filter(
         user_profile=user_profile,
         client=client,
-        defaults=defaults,
     ).first()
 
     if presence is None:
@@ -89,6 +88,7 @@ def do_update_user_presence(
             client=client,
             defaults=defaults,
         )
+        created = True
 
     stale_status = (log_time - presence.timestamp) > datetime.timedelta(minutes=1, seconds=10)
     was_idle = presence.status == UserPresence.IDLE
