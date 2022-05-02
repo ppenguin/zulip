@@ -67,6 +67,7 @@ def do_update_user_presence(
     user_profile: UserProfile, client: Client, log_time: datetime.datetime, status: int
 ) -> None:
     client = consolidate_client(client)
+    created = False
 
     defaults = dict(
         timestamp=log_time,
