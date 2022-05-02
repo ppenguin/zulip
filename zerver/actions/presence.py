@@ -74,11 +74,21 @@ def do_update_user_presence(
         realm_id=user_profile.realm_id,
     )
 
-    (presence, created) = UserPresence.objects.get_or_create(
+    # this throws (sometimes?) the following error:
+    # zerver.models.UserPresence.MultipleObjectsReturned: get() returned more than one UserPresence -- it returned 2!
+    # It seems we can't easily filter with get_or_create, so we split it...
+    presence = UserPresence.objects.filter(
         user_profile=user_profile,
         client=client,
         defaults=defaults,
-    )
+    ).first()
+
+    if presence is None:
+        presence = UserPresence.objects.create(
+            user_profile=user_profile,
+            client=client,
+            defaults=defaults,
+        )
 
     stale_status = (log_time - presence.timestamp) > datetime.timedelta(minutes=1, seconds=10)
     was_idle = presence.status == UserPresence.IDLE
