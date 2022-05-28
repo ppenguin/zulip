@@ -46,6 +46,7 @@ from zerver.lib.streams import (
     send_stream_creation_event,
 )
 from zerver.lib.subscription_info import get_subscribers_query
+from zerver.lib.types import APISubscriptionDict
 from zerver.models import (
     ArchivedAttachment,
     Attachment,
@@ -177,19 +178,47 @@ def send_subscription_add_events(
             )
 
     for user_id, sub_infos in info_by_user.items():
-        sub_dicts = []
+        sub_dicts: List[APISubscriptionDict] = []
         for sub_info in sub_infos:
             stream = sub_info.stream
             stream_info = stream_info_dict[stream.id]
             subscription = sub_info.sub
-            sub_dict = stream.to_dict()
-            for field_name in Subscription.API_FIELDS:
-                sub_dict[field_name] = getattr(subscription, field_name)
+            stream_dict = stream.to_dict()
+            # This is verbose as we cannot unpack existing TypedDict
+            # to initialize another TypedDict while making mypy happy.
+            # https://github.com/python/mypy/issues/5382
+            sub_dict = APISubscriptionDict(
+                # Fields from Subscription.API_FIELDS
+                audible_notifications=subscription.audible_notifications,
+                color=subscription.color,
+                desktop_notifications=subscription.desktop_notifications,
+                email_notifications=subscription.email_notifications,
+                is_muted=subscription.is_muted,
+                pin_to_top=subscription.pin_to_top,
+                push_notifications=subscription.push_notifications,
+                role=subscription.role,
+                wildcard_mentions_notify=subscription.wildcard_mentions_notify,
+                # Computed fields not present in Subscription.API_FIELDS
+                email_address=stream_info.email_address,
+                in_home_view=not subscription.is_muted,
+                stream_weekly_traffic=stream_info.stream_weekly_traffic,
+                subscribers=stream_info.subscribers,
+                # Fields from Stream.API_FIELDS
+                date_created=stream_dict["date_created"],
+                description=stream_dict["description"],
+                first_message_id=stream_dict["first_message_id"],
+                history_public_to_subscribers=stream_dict["history_public_to_subscribers"],
+                invite_only=stream_dict["invite_only"],
+                is_web_public=stream_dict["is_web_public"],
+                message_retention_days=stream_dict["message_retention_days"],
+                name=stream_dict["name"],
+                rendered_description=stream_dict["rendered_description"],
+                stream_id=stream_dict["stream_id"],
+                stream_post_policy=stream_dict["stream_post_policy"],
+                # Computed fields not present in Stream.API_FIELDS
+                is_announcement_only=stream_dict["is_announcement_only"],
+            )
 
-            sub_dict["in_home_view"] = not subscription.is_muted
-            sub_dict["email_address"] = stream_info.email_address
-            sub_dict["stream_weekly_traffic"] = stream_info.stream_weekly_traffic
-            sub_dict["subscribers"] = stream_info.subscribers
             sub_dicts.append(sub_dict)
 
         # Send a notification to the user who subscribed.
@@ -564,10 +593,10 @@ def bulk_remove_subscriptions(
             subs_to_deactivate.append(sub_info)
             sub_ids_to_deactivate.append(sub_info.sub.id)
 
+    streams_to_unsubscribe = [sub_info.stream for sub_info in subs_to_deactivate]
     # We do all the database changes in a transaction to ensure
     # RealmAuditLog entries are atomically created when making changes.
     with transaction.atomic():
-        occupied_streams_before = list(get_occupied_streams(realm))
         Subscription.objects.filter(
             id__in=sub_ids_to_deactivate,
         ).update(active=False)
@@ -607,7 +636,9 @@ def bulk_remove_subscriptions(
         event = {
             "type": "mark_stream_messages_as_read",
             "user_profile_id": user_profile.id,
-            "stream_recipient_ids": [stream.recipient_id for stream in streams],
+            "stream_recipient_ids": [
+                stream.recipient_id for stream in streams_by_user[user_profile.id]
+            ],
         }
         queue_json_publish("deferred_work", event)
 
@@ -617,7 +648,7 @@ def bulk_remove_subscriptions(
         altered_user_dict=altered_user_dict,
     )
 
-    new_vacant_streams = set(occupied_streams_before) - set(occupied_streams_after)
+    new_vacant_streams = set(streams_to_unsubscribe) - set(occupied_streams_after)
     new_vacant_private_streams = [stream for stream in new_vacant_streams if stream.invite_only]
 
     if new_vacant_private_streams:

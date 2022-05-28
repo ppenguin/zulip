@@ -430,7 +430,7 @@ class RealmTest(ZulipTestCase):
         invalid_notif_stream_id = 1234
         req = dict(notifications_stream_id=orjson.dumps(invalid_notif_stream_id).decode())
         result = self.client_patch("/json/realm", req)
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
         realm = get_realm("zulip")
         assert realm.notifications_stream is not None
         self.assertNotEqual(realm.notifications_stream.id, invalid_notif_stream_id)
@@ -478,7 +478,7 @@ class RealmTest(ZulipTestCase):
             ).decode()
         )
         result = self.client_patch("/json/realm", req)
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
         realm = get_realm("zulip")
         assert realm.signup_notifications_stream is not None
         self.assertNotEqual(
@@ -848,10 +848,6 @@ class RealmTest(ZulipTestCase):
         with self.settings(WEB_PUBLIC_STREAMS_ENABLED=False):
             self.assertEqual(realm.has_web_public_streams(), False)
             self.assertEqual(realm.web_public_streams_enabled(), False)
-
-            with self.settings(WEB_PUBLIC_STREAMS_BETA_SUBDOMAINS=["zulip"]):
-                self.assertEqual(realm.has_web_public_streams(), True)
-                self.assertEqual(realm.web_public_streams_enabled(), True)
 
         realm.enable_spectator_access = False
         realm.save()

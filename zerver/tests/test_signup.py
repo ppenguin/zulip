@@ -731,6 +731,17 @@ class PasswordResetTest(ZulipTestCase):
         result = self.client_get("/accounts/new/send_confirm/alice@example.com")
         self.assert_in_success_response(["/new/"], result)
 
+    def test_password_reset_for_soft_deactivated_user(self) -> None:
+        user_profile = self.example_user("hamlet")
+        email = user_profile.delivery_email
+        with self.soft_deactivate_and_check_long_term_idle(user_profile, False):
+            # start the password reset process by supplying an email address
+            result = self.client_post("/accounts/password/reset/", {"email": email})
+
+            # check the redirect link telling you to check mail for password reset link
+            self.assertEqual(result.status_code, 302)
+            self.assertTrue(result["Location"].endswith("/accounts/password/reset/done/"))
+
 
 class LoginTest(ZulipTestCase):
     """
@@ -821,19 +832,20 @@ class LoginTest(ZulipTestCase):
         self.assert_logged_in_user_id(None)
 
     def test_login_wrong_subdomain(self) -> None:
-        email = self.mit_email("sipbtest")
-        with self.assertLogs(level="WARNING") as m:
+        user_profile = self.mit_user("sipbtest")
+        email = user_profile.delivery_email
+        with self.assertLogs("zulip.auth.OurAuthenticationForm", level="INFO") as m:
             result = self.login_with_return(email, "xxx")
+            matching_accounts_dict = {"realm_id": user_profile.realm_id, "id": user_profile.id}
             self.assertEqual(
                 m.output,
                 [
-                    "WARNING:root:User sipbtest@mit.edu attempted password login to wrong subdomain zulip"
+                    f"INFO:zulip.auth.OurAuthenticationForm:User attempted password login to wrong subdomain zulip. Matching accounts: [{matching_accounts_dict}]"
                 ],
             )
         self.assertEqual(result.status_code, 200)
         expected_error = (
-            f"Your Zulip account {email} is not a member of the "
-            + "organization associated with this subdomain."
+            "Please enter a correct email and password. Note that both fields may be case-sensitive"
         )
         self.assert_in_response(expected_error, result)
         self.assert_logged_in_user_id(None)
@@ -874,13 +886,13 @@ class LoginTest(ZulipTestCase):
             with self.captureOnCommitCallbacks(execute=True):
                 self.register(self.nonreg_email("test"), "test")
         # Ensure the number of queries we make is not O(streams)
-        self.assert_length(queries, 95)
+        self.assert_length(queries, 96)
 
         # We can probably avoid a couple cache hits here, but there doesn't
         # seem to be any O(N) behavior.  Some of the cache hits are related
         # to sending messages, such as getting the welcome bot, looking up
         # the alert words for a realm, etc.
-        self.assert_length(cache_tries, 23)
+        self.assert_length(cache_tries, 22)
 
         user_profile = self.nonreg_user("test")
         self.assert_logged_in_user_id(user_profile.id)
@@ -3038,7 +3050,7 @@ class MultiuseInviteTest(ZulipTestCase):
                 "invite_expires_in_minutes": 2 * 24 * 60,
             },
         )
-        self.assert_json_error(result, "Invalid stream id 54321. No invites were sent.")
+        self.assert_json_error(result, "Invalid stream ID 54321. No invites were sent.")
 
 
 class EmailUnsubscribeTests(ZulipTestCase):
@@ -5590,8 +5602,11 @@ class UserSignUpTest(InviteUserBase):
 
         do_set_realm_property(realm, "default_language", "hi", acting_user=None)
         realm.refresh_from_db()
+        req = HostRequestMock()
+        req.META["HTTP_ACCEPT_LANGUAGE"] = "de,en"
         self.assertEqual(get_default_language_for_new_user(req, realm), "de")
 
+        req = HostRequestMock()
         req.META["HTTP_ACCEPT_LANGUAGE"] = ""
         self.assertEqual(get_default_language_for_new_user(req, realm), "hi")
 

@@ -182,6 +182,7 @@ class HomeTest(ZulipTestCase):
         "realm_users",
         "realm_video_chat_provider",
         "realm_waiting_period_threshold",
+        "realm_want_advertise_in_communities_directory",
         "realm_wildcard_mention_policy",
         "recent_private_conversations",
         "request_language",
@@ -328,36 +329,36 @@ class HomeTest(ZulipTestCase):
         page_params = self._get_page_params(result)
         self.assertEqual(page_params["is_spectator"], True)
         actual_keys = sorted(str(k) for k in page_params.keys())
-        removed_keys = [
-            "custom_profile_field_types",
-            "custom_profile_fields",
-            "last_event_id",
-            "narrow",
-            "narrow_stream",
+        expected_keys = [
+            "apps_page_url",
+            "bot_types",
+            "corporate_enabled",
+            "development_environment",
+            "first_in_realm",
+            "furthest_read_time",
+            "insecure_desktop_app",
+            "is_spectator",
+            "language_list",
+            "login_page",
+            "needs_tutorial",
+            "no_event_queue",
+            "promote_sponsoring_zulip",
+            "prompt_for_invites",
+            "queue_id",
+            "realm_rendered_description",
+            "request_language",
+            "search_pills_enabled",
+            "show_billing",
+            "show_plans",
+            "show_webathena",
+            "test_suite",
+            "translation_data",
+            "two_fa_enabled",
+            "two_fa_enabled_user",
+            "warn_no_email",
+            "webpack_public_path",
         ]
-        expected_keys = [i for i in self.expected_page_params_keys if i not in removed_keys]
         self.assertEqual(actual_keys, expected_keys)
-
-        # Test information passed to client about users.
-        page_params = self._get_page_params(result)
-        self.assertEqual(
-            sorted(page_params["realm_users"][0].keys()),
-            [
-                "avatar_url",
-                "avatar_version",
-                "date_joined",
-                "email",
-                "full_name",
-                "is_admin",
-                "is_bot",
-                "is_guest",
-                "is_owner",
-                "role",
-                "user_id",
-            ],
-        )
-        date_length = len("YYYY-MM-DD")
-        self.assert_length(page_params["realm_users"][0]["date_joined"], date_length)
 
     def test_home_under_2fa_without_otp_device(self) -> None:
         with self.settings(TWO_FACTOR_AUTHENTICATION_ENABLED=True):
@@ -660,6 +661,7 @@ class HomeTest(ZulipTestCase):
                         avatar_version=cross_realm_email_gateway_bot.avatar_version,
                         bot_owner_id=None,
                         bot_type=1,
+                        delivery_email=cross_realm_email_gateway_bot.delivery_email,
                         email=cross_realm_email_gateway_bot.email,
                         user_id=cross_realm_email_gateway_bot.id,
                         full_name=cross_realm_email_gateway_bot.full_name,
@@ -676,6 +678,7 @@ class HomeTest(ZulipTestCase):
                         avatar_version=cross_realm_notification_bot.avatar_version,
                         bot_owner_id=None,
                         bot_type=1,
+                        delivery_email=cross_realm_notification_bot.delivery_email,
                         email=cross_realm_notification_bot.email,
                         user_id=cross_realm_notification_bot.id,
                         full_name=cross_realm_notification_bot.full_name,
@@ -692,6 +695,7 @@ class HomeTest(ZulipTestCase):
                         avatar_version=cross_realm_welcome_bot.avatar_version,
                         bot_owner_id=None,
                         bot_type=1,
+                        delivery_email=cross_realm_welcome_bot.delivery_email,
                         email=cross_realm_welcome_bot.email,
                         user_id=cross_realm_welcome_bot.id,
                         full_name=cross_realm_welcome_bot.full_name,

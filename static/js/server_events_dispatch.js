@@ -224,6 +224,7 @@ export function dispatch_normal_event(event) {
                 video_chat_provider: compose.update_video_chat_button_display,
                 giphy_rating: giphy.update_giphy_rating,
                 waiting_period_threshold: noop,
+                want_advertise_in_communities_directory: noop,
                 wildcard_mention_policy: noop,
             };
             switch (event.op) {
@@ -752,6 +753,12 @@ export function dispatch_normal_event(event) {
                     break;
                 case "remove_members":
                     user_groups.remove_members(event.group_id, event.user_ids);
+                    break;
+                case "add_subgroups":
+                    user_groups.add_subgroups(event.group_id, event.direct_subgroup_ids);
+                    break;
+                case "remove_subgroups":
+                    user_groups.remove_subgroups(event.group_id, event.direct_subgroup_ids);
                     break;
                 case "update":
                     user_groups.update(event);

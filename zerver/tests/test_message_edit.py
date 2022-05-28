@@ -12,7 +12,7 @@ from zerver.actions.message_edit import (
     check_update_message,
     do_delete_messages,
     do_update_message,
-    get_user_info_for_message_updates,
+    get_mentions_for_message_updates,
 )
 from zerver.actions.reactions import do_add_reaction
 from zerver.actions.realm_settings import do_change_realm_plan_type, do_set_realm_property
@@ -730,7 +730,7 @@ class EditMessageTest(EditMessageTestCase):
         message_history = result.json()["message_history"]
         self.assert_length(message_history, 1)
 
-    def test_user_info_for_updates(self) -> None:
+    def test_mentions_for_message_updates(self) -> None:
         hamlet = self.example_user("hamlet")
         cordelia = self.example_user("cordelia")
 
@@ -742,12 +742,7 @@ class EditMessageTest(EditMessageTestCase):
             hamlet, "Denmark", content="@**Cordelia, Lear's daughter**"
         )
 
-        user_info = get_user_info_for_message_updates(msg_id)
-        message_user_ids = user_info["message_user_ids"]
-        self.assertIn(hamlet.id, message_user_ids)
-        self.assertIn(cordelia.id, message_user_ids)
-
-        mention_user_ids = user_info["mention_user_ids"]
+        mention_user_ids = get_mentions_for_message_updates(msg_id)
         self.assertEqual(mention_user_ids, {cordelia.id})
 
     def test_edit_cases(self) -> None:
@@ -1783,7 +1778,7 @@ class EditMessageTest(EditMessageTestCase):
             },
         )
 
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_move_message_realm_admin_cant_move_to_private_stream_without_subscription(
         self,
@@ -1803,7 +1798,7 @@ class EditMessageTest(EditMessageTestCase):
             },
         )
 
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_move_message_realm_admin_cant_move_from_private_stream_without_subscription(
         self,

@@ -83,6 +83,7 @@ from zerver.lib.exceptions import JsonableError, RateLimited
 from zerver.lib.pysa import mark_sanitized
 from zerver.lib.timestamp import datetime_to_timestamp
 from zerver.lib.types import (
+    APIStreamDict,
     DisplayRecipientT,
     ExtendedFieldElement,
     ExtendedValidator,
@@ -292,6 +293,12 @@ class Realm(models.Model):
     # Allow users to access web-public streams without login. This
     # setting also controls API access of web-public streams.
     enable_spectator_access: bool = models.BooleanField(default=False)
+
+    # Whether organization has given permission to be advertised in the
+    # Zulip communities directory.
+    want_advertise_in_communities_directory: bool = models.BooleanField(
+        default=False, db_index=True
+    )
 
     # Whether the organization has enabled inline image and URL previews.
     inline_image_preview: bool = models.BooleanField(default=True)
@@ -711,6 +718,7 @@ class Realm(models.Model):
         user_group_edit_policy=int,
         video_chat_provider=int,
         waiting_period_threshold=int,
+        want_advertise_in_communities_directory=bool,
         wildcard_mention_policy=int,
     )
 
@@ -936,20 +944,11 @@ class Realm(models.Model):
     def presence_disabled(self) -> bool:
         return self.is_zephyr_mirror_realm
 
-    def web_public_streams_available_for_realm(self) -> bool:
-        if self.string_id in settings.WEB_PUBLIC_STREAMS_BETA_SUBDOMAINS:
-            return True
-
+    def web_public_streams_enabled(self) -> bool:
         if not settings.WEB_PUBLIC_STREAMS_ENABLED:
             # To help protect against accidentally web-public streams in
             # self-hosted servers, we require the feature to be enabled at
             # the server level before it is available to users.
-            return False
-
-        return True
-
-    def web_public_streams_enabled(self) -> bool:
-        if not self.web_public_streams_available_for_realm():
             return False
 
         if self.plan_type == Realm.PLAN_TYPE_LIMITED:
@@ -2485,22 +2484,25 @@ class Stream(models.Model):
     ]
 
     @staticmethod
-    def get_client_data(query: QuerySet) -> List[Dict[str, Any]]:
+    def get_client_data(query: QuerySet) -> List[APIStreamDict]:
         query = query.only(*Stream.API_FIELDS)
         return [row.to_dict() for row in query]
 
-    def to_dict(self) -> Dict[str, Any]:
-        result = {}
-        for field_name in self.API_FIELDS:
-            if field_name == "id":
-                result["stream_id"] = self.id
-                continue
-            elif field_name == "date_created":
-                result["date_created"] = datetime_to_timestamp(self.date_created)
-                continue
-            result[field_name] = getattr(self, field_name)
-        result["is_announcement_only"] = self.stream_post_policy == Stream.STREAM_POST_POLICY_ADMINS
-        return result
+    def to_dict(self) -> APIStreamDict:
+        return APIStreamDict(
+            date_created=datetime_to_timestamp(self.date_created),
+            description=self.description,
+            first_message_id=self.first_message_id,
+            history_public_to_subscribers=self.history_public_to_subscribers,
+            invite_only=self.invite_only,
+            is_web_public=self.is_web_public,
+            message_retention_days=self.message_retention_days,
+            name=self.name,
+            rendered_description=self.rendered_description,
+            stream_id=self.id,
+            stream_post_policy=self.stream_post_policy,
+            is_announcement_only=self.stream_post_policy == Stream.STREAM_POST_POLICY_ADMINS,
+        )
 
     class Meta:
         indexes = [

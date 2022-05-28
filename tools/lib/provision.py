@@ -163,7 +163,7 @@ COMMON_YUM_DEPENDENCIES = [
 ]
 
 BUILD_PGROONGA_FROM_SOURCE = False
-if vendor == "debian" and os_version in [] or vendor == "ubuntu" and os_version in ["22.04"]:
+if vendor == "debian" and os_version in [] or vendor == "ubuntu" and os_version in []:
     # For platforms without a PGroonga release, we need to build it
     # from source.
     BUILD_PGROONGA_FROM_SOURCE = True
@@ -174,8 +174,7 @@ if vendor == "debian" and os_version in [] or vendor == "ubuntu" and os_version 
         f"postgresql-server-dev-{POSTGRESQL_VERSION}",
         "libgroonga-dev",
         "libmsgpack-dev",
-        "clang-9",
-        "llvm-9-dev",
+        "clang",
         *VENV_DEPENDENCIES,
     ]
 elif "debian" in os_families():
@@ -278,7 +277,7 @@ def install_apt_deps(deps_to_install: List[str]) -> None:
 
 
 def install_yum_deps(deps_to_install: List[str]) -> None:
-    print(WARNING + "RedHat support is still experimental.")
+    print(WARNING + "RedHat support is still experimental." + ENDC)
     run_as_root(["./scripts/lib/setup-yum-repo"])
 
     # Hack specific to unregistered RHEL system.  The moreutils

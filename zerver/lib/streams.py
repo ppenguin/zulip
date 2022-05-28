@@ -1,4 +1,4 @@
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple, TypedDict, Union
+from typing import Collection, List, Optional, Set, Tuple, TypedDict, Union
 
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
@@ -18,6 +18,7 @@ from zerver.lib.stream_subscription import (
     get_subscribed_stream_ids_for_user,
 )
 from zerver.lib.string_validation import check_stream_name
+from zerver.lib.types import APIStreamDict
 from zerver.models import (
     DefaultStreamGroup,
     Realm,
@@ -301,7 +302,7 @@ def check_for_exactly_one_stream_arg(stream_id: Optional[int], stream: Optional[
 def check_stream_access_for_delete_or_update(
     user_profile: UserProfile, stream: Stream, sub: Optional[Subscription] = None
 ) -> None:
-    error = _("Invalid stream id")
+    error = _("Invalid stream ID")
     if stream.realm_id != user_profile.realm_id:
         raise JsonableError(error)
 
@@ -323,7 +324,7 @@ def access_stream_for_delete_or_update(
     try:
         stream = Stream.objects.get(id=stream_id)
     except Stream.DoesNotExist:
-        raise JsonableError(_("Invalid stream id"))
+        raise JsonableError(_("Invalid stream ID"))
 
     try:
         sub = Subscription.objects.get(
@@ -393,7 +394,7 @@ def access_stream_by_id(
     require_active: bool = True,
     allow_realm_admin: bool = False,
 ) -> Tuple[Stream, Optional[Subscription]]:
-    error = _("Invalid stream id")
+    error = _("Invalid stream ID")
     try:
         stream = get_stream_by_id_in_realm(stream_id, user_profile.realm)
     except Stream.DoesNotExist:
@@ -459,7 +460,7 @@ def access_stream_by_name(
 
 
 def access_web_public_stream(stream_id: int, realm: Realm) -> Stream:
-    error = _("Invalid stream id")
+    error = _("Invalid stream ID")
     try:
         stream = get_stream_by_id_in_realm(stream_id, realm)
     except Stream.DoesNotExist:
@@ -785,7 +786,7 @@ def get_occupied_streams(realm: Realm) -> QuerySet:
     return occupied_streams
 
 
-def get_web_public_streams(realm: Realm) -> List[Dict[str, Any]]:  # nocoverage
+def get_web_public_streams(realm: Realm) -> List[APIStreamDict]:  # nocoverage
     query = get_web_public_streams_queryset(realm)
     streams = Stream.get_client_data(query)
     return streams
@@ -799,7 +800,7 @@ def do_get_streams(
     include_all_active: bool = False,
     include_default: bool = False,
     include_owner_subscribed: bool = False,
-) -> List[Dict[str, Any]]:
+) -> List[APIStreamDict]:
     # This function is only used by API clients now.
 
     if include_all_active and not user_profile.is_realm_admin:

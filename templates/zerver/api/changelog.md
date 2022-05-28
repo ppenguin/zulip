@@ -20,6 +20,32 @@ format used by the Zulip server that they are interacting with.
 
 ## Changes in Zulip 6.0
 
+**Feature level 132**
+
+* [`GET /streams/{stream_id}`](/api/get-stream-by-id):
+  Added new endpoint to get a stream by ID.
+
+**Feature level 131**
+
+* [`GET /user_groups`](/api/get-user-groups),[`POST
+  /register`](/api/register-queue): Renamed `subgroups` field in
+  the user group objects to `direct_subgroup_ids`.
+* [`GET /events`](/api/get-events): Renamed `subgroup_ids` field
+  in the group object to `direct_subgroup_ids`.
+
+**Feature level 130**
+
+* `PATCH /bots/{bot_user_id}`: Added support for changing a bot's role
+  via this endpoint. Previously, this could only be done via [`PATCH
+  /users/{user_id}`](/api/update-user).
+
+**Feature level 129**
+
+* [`POST /register`](/api/register-queue),
+  [`GET /events`](/api/get-events), `PATCH /realm`: Added realm setting
+  `want_advertise_in_communities_directory` for organizations to give
+  permission to be advertised in the Zulip communities directory.
+
 **Feature level 128**
 
 * [`POST /register`](/api/register-queue), [`GET
@@ -193,7 +219,7 @@ No changes; feature level used for Zulip 5.0 release.
 
 **Feature level 104**
 
-* [`PATCH /realm`]: Added `string_id` parameter for changing an
+* `PATCH /realm`: Added `string_id` parameter for changing an
   organization's subdomain. Currently, this is only allowed for
   changing a demo organization to a normal one.
 
@@ -201,7 +227,8 @@ No changes; feature level used for Zulip 5.0 release.
 
 * [`POST /register`](/api/register-queue): Added `create_web_public_stream_policy`
   policy for which users can create web-public streams.
-* [`PATCH /realm`]: Added support for updating `create_web_public_stream_policy`.
+* [`GET /events`](/api/get-events), `PATCH /realm`: Added support for updating
+  `create_web_public_stream_policy`.
 * [`POST /register`](/api/register-queue): Added `can_create_web_public_streams` boolean
   field to the response.
 
@@ -688,7 +715,7 @@ field with an integer field `invite_to_realm_policy`.
 
 **Feature level 39**
 
-* Added new [GET /users/{email}](/api/get-user-by-email) endpoint.
+* Added new [`GET /users/{email}`](/api/get-user-by-email) endpoint.
 
 **Feature level 38**
 
@@ -898,7 +925,7 @@ No changes; feature level used for Zulip 3.0 release.
   subscribe/unsubscribe, declared in the `principals` parameter, can
   now be referenced by user_id, rather than Zulip display email
   address.
-* [PATCH /messages/{message_id}](/api/update-message): Added
+* [`PATCH /messages/{message_id}`](/api/update-message): Added
   `send_notification_to_old_thread` and
   `send_notification_to_new_thread` optional parameters.
 
@@ -1053,6 +1080,9 @@ No changes; feature level used for Zulip 3.0 release.
 
 ## Changes in Zulip 2.0
 
+* [`PATCH /users/me/subscriptions/muted_topics`](/api/mute-topic):
+  Added support for using stream IDs to specify the stream in which to
+  mute/unmute a topic.
 * [`POST /messages`](/api/send-message): Added support for using user
   IDs and stream IDs for specifying the recipients of a message.
 * [`POST /messages`](/api/send-message), [`POST

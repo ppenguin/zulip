@@ -15,6 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        include_documentation_tests: [false]
+        include_frontend_tests: [false]
         include:
           # Base images are built using `tools/ci/Dockerfile.prod.template`.
           # The comments at the top explain how to build and upload these images.
@@ -23,13 +25,15 @@ jobs:
             name: Ubuntu 20.04 (Python 3.8, backend + frontend)
             os: focal
             include_frontend_tests: true
-            include_documentation_tests: false
           # Debian 11 ships with Python 3.9.2.
           - docker_image: zulip/ci:bullseye
             name: Debian 11 (Python 3.9, backend + documentation)
             os: bullseye
             include_documentation_tests: true
-            include_frontend_tests: false
+          # Ubuntu 22.04 ships with Python 3.10.4.
+          - docker_image: zulip/ci:jammy
+            name: Ubuntu 22.04 (Python 3.10, backend)
+            os: jammy
 
     runs-on: ubuntu-latest
     name: ${{ matrix.name }}
@@ -52,27 +56,26 @@ jobs:
           sudo mkdir -p "${dirs[@]}"
           sudo chown -R github "${dirs[@]}"
 
-      # TEMPORARY: due to CI failures.
-      # - name: Restore node_modules cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: /srv/zulip-npm-cache
-      #     key: v1-yarn-deps-${{ matrix.os }}-${{ hashFiles('package.json') }}-${{ hashFiles('yarn.lock') }}
-      #     restore-keys: v1-yarn-deps-${{ matrix.os }}
+      - name: Restore node_modules cache
+        uses: actions/cache@v2
+        with:
+          path: /srv/zulip-npm-cache
+          key: v1-yarn-deps-${{ matrix.os }}-${{ hashFiles('package.json') }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: v1-yarn-deps-${{ matrix.os }}
 
-      # - name: Restore python cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: /srv/zulip-venv-cache
-      #     key: v1-venv-${{ matrix.os }}-${{ hashFiles('requirements/dev.txt') }}
-      #     restore-keys: v1-venv-${{ matrix.os }}
+      - name: Restore python cache
+        uses: actions/cache@v2
+        with:
+          path: /srv/zulip-venv-cache
+          key: v1-venv-${{ matrix.os }}-${{ hashFiles('requirements/dev.txt') }}
+          restore-keys: v1-venv-${{ matrix.os }}
 
-      # - name: Restore emoji cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: /srv/zulip-emoji-cache
-      #     key: v1-emoji-${{ matrix.os }}-${{ hashFiles('tools/setup/emoji/emoji_map.json') }}-${{ hashFiles('tools/setup/emoji/build_emoji') }}-${{ hashFiles('tools/setup/emoji/emoji_setup_utils.py') }}-${{ hashFiles('tools/setup/emoji/emoji_names.py') }}-${{ hashFiles('package.json') }}
-      #     restore-keys: v1-emoji-${{ matrix.os }}
+      - name: Restore emoji cache
+        uses: actions/cache@v2
+        with:
+          path: /srv/zulip-emoji-cache
+          key: v1-emoji-${{ matrix.os }}-${{ hashFiles('tools/setup/emoji/emoji_map.json') }}-${{ hashFiles('tools/setup/emoji/build_emoji') }}-${{ hashFiles('tools/setup/emoji/emoji_setup_utils.py') }}-${{ hashFiles('tools/setup/emoji/emoji_names.py') }}-${{ hashFiles('package.json') }}
+          restore-keys: v1-emoji-${{ matrix.os }}
 
       - name: Install dependencies
         run: |

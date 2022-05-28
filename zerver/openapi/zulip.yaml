@@ -538,8 +538,10 @@ paths:
                                                 The ID of the custom profile field which user updated.
                                             value:
                                               type: string
+                                              nullable: true
                                               description: |
-                                                User's personal value for this custom profile field.
+                                                User's personal value for this custom profile field,
+                                                or `null` if unset.
                                             rendered_value:
                                               type: string
                                               description: |
@@ -566,7 +568,10 @@ paths:
                                         new_email:
                                           type: string
                                           description: |
-                                            The new email of the user.
+                                            The new value of `email` for the user. The client
+                                            should update any data structures associated
+                                            with this user to use this new value as the
+                                            user's Zulip display email address.
                               additionalProperties: false
                               example:
                                 {
@@ -2853,19 +2858,24 @@ paths:
                                   type: integer
                                   description: |
                                     The ID of the user group whose details have changed.
-                                subgroup_ids:
+                                direct_subgroup_ids:
                                   type: array
                                   items:
                                     type: integer
                                   description: |
                                     Array containing the IDs of the subgroups that have been added
                                     to the user group.
+
+                                    **Changes**: New in Zulip 6.0 (feature level 131).
+                                    Previously, this was called `subgroup_ids`, but
+                                    clients can ignore older events as this feature level
+                                    predates subgroups being fully implemented.
                               example:
                                 {
                                   "type": "user_group",
                                   "op": "add_subgroups",
                                   "group_id": 2,
-                                  "subgroup_ids": [10],
+                                  "direct_subgroup_ids": [10],
                                   "id": 0,
                                 }
                             - type: object
@@ -2891,19 +2901,24 @@ paths:
                                   type: integer
                                   description: |
                                     The ID of the user group whose details have changed.
-                                subgroup_ids:
+                                direct_subgroup_ids:
                                   type: array
                                   items:
                                     type: integer
                                   description: |
                                     Array containing the IDs of the subgroups that have been
                                     removed from the user group.
+
+                                    **Changes**: New in Zulip 6.0 (feature level 131).
+                                    Previously, this was called `subgroup_ids`, but
+                                    clients can ignore older events as this feature level
+                                    predates subgroups being fully implemented.
                               example:
                                 {
                                   "type": "user_group",
                                   "op": "remove_subgroups",
                                   "group_id": 2,
-                                  "subgroup_ids": [10],
+                                  "direct_subgroup_ids": [10],
                                   "id": 0,
                                 }
                             - type: object
@@ -3707,6 +3722,13 @@ paths:
 
                                         **Changes**: Before Zulip 5.0 (feature level 102), permission to
                                         create streams was controlled by the `create_stream_policy` setting.
+                                    create_web_public_stream_policy:
+                                      type: integer
+                                      description: |
+                                        The [policy](/api/roles-and-permissions#permission-levels)
+                                        for which users can create web public streams in this organization.
+
+                                        **Changes**: New in Zulip 5.0 (feature level 103).
                                     default_code_block_language:
                                       type: string
                                       nullable: true
@@ -4013,6 +4035,13 @@ paths:
                                         for the purpose of settings that restrict access to new members.
 
                                         [calc-full-member]: /api/roles-and-permissions#determining-if-a-user-is-a-full-member
+                                    want_advertise_in_communities_directory:
+                                      type: boolean
+                                      description: |
+                                        Whether the organization has given permission to be advertised in the
+                                        Zulip [communities directory](/help/communities-directory).
+
+                                        **Changes**: New in Zulip 6.0 (feature level 129).
                                     wildcard_mention_policy:
                                       type: integer
                                       description: |
@@ -6815,7 +6844,7 @@ paths:
                   - $ref: "#/components/schemas/SuccessDescription"
                   - example: {"msg": "", "result": "success"}
         "400":
-          description: Success.
+          description: Bad request.
           content:
             application/json:
               schema:
@@ -6944,7 +6973,7 @@ paths:
                   - example:
                       {
                         "code": "BAD_REQUEST",
-                        "msg": "Invalid stream id",
+                        "msg": "Invalid stream ID",
                         "result": "error",
                       }
                     description: |
@@ -7423,21 +7452,30 @@ paths:
               enum:
                 - stream_id
       parameters:
-        - name: stream
-          in: query
-          description: |
-            The name of the stream to access.
-          schema:
-            type: string
-          example: Denmark
-          required: false
         - name: stream_id
           in: query
           description: |
             The ID of the stream to access.
+
+            Clients must provide either `stream` or `stream_id` as a parameter
+            to this endpoint, but not both.
+
+            **Changes**: New in Zulip 2.0.
           schema:
             type: integer
           example: 43
+          required: false
+        - name: stream
+          in: query
+          description: |
+            The name of the stream to access.
+
+            Clients must provide either `stream` or `stream_id` as a parameter
+            to this endpoint, but not both. Clients should use `stream_id`
+            instead of the `stream` parameter when possible.
+          schema:
+            type: string
+          example: Denmark
           required: false
         - name: topic
           in: query
@@ -8763,7 +8801,7 @@ paths:
                   - $ref: "#/components/schemas/SuccessDescription"
                   - example: {"msg": "", "result": "success"}
         "400":
-          description: Bad request
+          description: Bad request.
           content:
             application/json:
               schema:
@@ -9200,8 +9238,12 @@ paths:
                       msg: {}
                       queue_id:
                         type: string
+                        nullable: true
                         description: |
                           The ID of the queue that has been allocated for your client.
+
+                          Will be None only for unauthenticated access in realms that have
+                          enabled the [public access option](/help/public-access-option).
                       last_event_id:
                         type: integer
                         description: |
@@ -11167,7 +11209,21 @@ paths:
                           **Changes**: New in Zulip 5.0 (feature level 109).
 
                           [server-settings]: https://zulip.readthedocs.io/en/stable/production/settings.html
+                      realm_want_advertise_in_communities_directory:
+                        type: boolean
+                        description: |
+                          Present if `realm` is present in `fetch_event_types`.
 
+                          Whether the organization has given permission to be advertised in the
+                          Zulip [communities directory](/help/communities-directory).
+
+                          Useful only to clients supporting changing this setting for the
+                          organization.
+
+                          Giving permission via this setting does not guarantee that an
+                          organization will be listed in the Zulip communities directory.
+
+                          **Changes**: New in Zulip 6.0 (feature level 129).
                       realm_video_chat_provider:
                         type: integer
                         description: |
@@ -13203,7 +13259,7 @@ paths:
                   - example:
                       {
                         "code": "BAD_REQUEST",
-                        "msg": "Invalid stream id",
+                        "msg": "Invalid stream ID",
                         "result": "error",
                       }
                     description: |
@@ -13386,6 +13442,67 @@ paths:
                       `include_all_active` parameter (i.e. because they are not an organization
                       administrator):
   /streams/{stream_id}:
+    get:
+      operationId: get-stream-by-id
+      summary: Get a stream by ID
+      tags: ["streams"]
+      description: |
+        Fetch details for the stream with the ID `stream_id`.
+
+        `GET {{ api_url }}/v1/streams/{stream_id}`
+
+        **Changes**: New in Zulip 6.0 (feature level 132).
+      parameters:
+        - $ref: "#/components/parameters/StreamIdInPath"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/JsonSuccessBase"
+                  - $ref: "#/components/schemas/SuccessDescription"
+                  - additionalProperties: false
+                    properties:
+                      result: {}
+                      msg: {}
+                      stream:
+                        $ref: "#/components/schemas/BasicStream"
+                    example:
+                      {
+                        "msg": "",
+                        "result": "success",
+                        "stream":
+                          {
+                            "description": "A Scandinavian country",
+                            "first_message_id": 1,
+                            "history_public_to_subscribers": True,
+                            "invite_only": False,
+                            "is_announcement_only": False,
+                            "is_web_public": False,
+                            "message_retention_days": null,
+                            "name": "Denmark",
+                            "rendered_description": "<p>A Scandinavian country</p>",
+                            "stream_id": 7,
+                            "stream_post_policy": 1,
+                          },
+                      }
+        "400":
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/CodedError"
+                  - example:
+                      {
+                        "code": "BAD_REQUEST",
+                        "msg": "Invalid stream ID",
+                        "result": "error",
+                      }
+                    description: |
+                      An example JSON response for when the stream ID is not valid.
     delete:
       operationId: archive-stream
       summary: Archive a stream
@@ -13416,7 +13533,7 @@ paths:
                   - example:
                       {
                         "code": "BAD_REQUEST",
-                        "msg": "Invalid stream id",
+                        "msg": "Invalid stream ID",
                         "result": "error",
                       }
                     description: |
@@ -13532,7 +13649,7 @@ paths:
                   - example:
                       {
                         "code": "BAD_REQUEST",
-                        "msg": "Invalid stream id",
+                        "msg": "Invalid stream ID",
                         "result": "error",
                       }
                     description: |
@@ -13570,7 +13687,7 @@ paths:
                   - $ref: "#/components/schemas/JsonSuccess"
                   - $ref: "#/components/schemas/SuccessDescription"
         "400":
-          description: Error.
+          description: Bad request.
           content:
             application/json:
               schema:
@@ -13597,22 +13714,26 @@ paths:
 
         Clients implementing Zulip's typing notifications protocol should work as follows:
 
-        - Send a request to this endpoint with `op="start"` when a user starts typing a message,
-          and also every `TYPING_STARTED_WAIT_PERIOD=10` seconds that the user continues to
-          actively type or otherwise interact with the compose UI (E.g. interacting with the
+        - Send a request to this endpoint with `op = "start"` when a user starts typing a message,
+          and also every `TYPING_STARTED_WAIT_PERIOD = 10` seconds that the user continues to
+          actively type or otherwise interact with the compose UI (e.g. interacting with the
           compose box emoji picker).
-        - Send a request to this endpoint with `op="stop"` when a user pauses using the
-          compose UI for at least `TYPING_STOPPED_WAIT_PERIOD=5` seconds or cancels
+        - Send a request to this endpoint with `op = "stop"` when a user pauses using the
+          compose UI for at least `TYPING_STOPPED_WAIT_PERIOD = 5` seconds or cancels
           the compose action (if it had previously sent a "start" operation for that
           compose action).
         - Start displaying "Sender is typing" for a given conversation when the client
-          receives an `op="start"` event from the [events API](/api/get-events).
-        - Continue displaying "Sender is typing" until they receive an `op="stop"` event
-          from the [events API](/api/get-events) or `TYPING_STARTED_EXPIRY_PERIOD=15`
-          seconds have passed without a new `op="start"` event for that conversation.
-        - Clients that support displaying stream typing notifications (new in Zulip 4.0)
-          should indicate they support processing stream typing events via the
-          `stream_typing_notifications` in the `client_capabilities` parameter to `/register`.
+          receives an `op = "start"` event from the [`GET /events`](/api/get-events#typing-start)
+          endpoint.
+        - Continue displaying "Sender is typing" until they receive an `op = "stop"` event
+          from the [`GET /events`](/api/get-events#typing-stop) endpoint or
+          `TYPING_STARTED_EXPIRY_PERIOD = 15` seconds have passed without a new `op = "start"`
+          event for that conversation.
+        - Support for displaying stream typing notifications was new in Zulip 4.0
+          (feature level 58). Clients should indicate they support processing stream typing
+          events via the `stream_typing_notifications` value in the `client_capabilities`
+          parameter to [`POST /register`](/api/register-queue#parameter-client_capabilities)
+          endpoint.
 
         This protocol is designed to allow the server-side typing notifications implementation
         to be stateless while being resilient; network failures cannot result in a user being
@@ -13632,6 +13753,9 @@ paths:
           in: query
           description: |
             Type of the message being composed.
+
+            **Changes**: New in Zulip 4.0 (feature level 58). Previously, typing
+            notifications were only for private messages.
           schema:
             type: string
             enum:
@@ -13642,7 +13766,7 @@ paths:
         - name: op
           in: query
           description: |
-            Whether the user has started (`start`) or stopped (`stop`) to type.
+            Whether the user has started (`"start"`) or stopped (`"stop"`) typing.
           schema:
             type: string
             enum:
@@ -13653,14 +13777,18 @@ paths:
         - name: to
           in: query
           description: |
-            For 'private' type it is the user_ids of the recipients of the message being typed.
+            For `"private"` type it is the user_ids of the recipients of the message being typed.
             Send a JSON-encoded list of user_ids. (Use a list even if there is only one
             recipient.)
 
-            For 'stream' type it is a single element list containing ID of stream in
+            For `"stream"` type it is a single element list containing ID of stream in
             which the message is being typed.
 
-            **Changes**: Before Zulip 2.0, this parameter accepted only a JSON-encoded
+            **Changes**: Support for typing notifications for stream messages
+            is new in Zulip 4.0 (feature level 58). Previously, typing
+            notifications were only for private messages.
+
+            Before Zulip 2.0, this parameter accepted only a JSON-encoded
             list of email addresses. Support for the email address-based format was
             removed in Zulip 3.0 (feature level 11).
           content:
@@ -13674,8 +13802,11 @@ paths:
         - name: topic
           in: query
           description: |
-            Topic to which message is being typed. Required for the 'stream' type.
-            Ignored in case of 'private' type.
+            Topic to which message is being typed. Required for the `"stream"` type.
+            Ignored in the case of `"private"` type.
+
+            **Changes**: New in Zulip 4.0 (feature level 58). Previously, typing
+            notifications were only for private messages.
           schema:
             type: string
           example: typing notifications
@@ -13973,12 +14104,15 @@ paths:
                                 The integer user IDs of the user group members.
                               items:
                                 type: integer
-                            subgroups:
+                            direct_subgroup_ids:
                               type: array
                               description: |
-                                The integer user group IDs of the subgroups.
+                                The integer user group IDs of the direct subgroups.
 
-                                **Changes**: New in Zulip 6.0 (feature level 127).
+                                **Changes**: New in Zulip 6.0 (feature level 131).
+                                Introduced in feature level 127 as `subgroups`, but
+                                clients can ignore older events as this feature level
+                                predates subgroups being fully implemented.
                               items:
                                 type: integer
                             name:
@@ -14006,7 +14140,7 @@ paths:
                               "id": 1,
                               "name": "hamletcharacters",
                               "members": [3, 4],
-                              "subgroups": [],
+                              "direct_subgroup_ids": [],
                               "is_system_group": false,
                             },
                             {
@@ -14014,7 +14148,7 @@ paths:
                               "id": 2,
                               "name": "other users",
                               "members": [1, 2],
-                              "subgroups": [1, 2],
+                              "direct_subgroup_ids": [1, 2],
                               "is_system_group": true,
                             },
                           ],
@@ -14953,15 +15087,18 @@ components:
           description: |
             Array containing the id of the users who are
             members of this user group.
-        subgroups:
+        direct_subgroup_ids:
           type: array
           items:
             type: integer
           description: |
-            Array containing the id of the subgroups of this
-            user group.
+            Array containing the id of the direct_subgroups of
+            this user group.
 
-            **Changes**: New in Zulip 6.0 (feature level 127).
+            **Changes**: New in Zulip 6.0 (feature level 131).
+            Introduced in feature level 127 as `subgroups`, but
+            clients can ignore older events as this feature level
+            predates subgroups being fully implemented.
         id:
           type: integer
           description: |
@@ -15970,15 +16107,11 @@ components:
             }
     InvalidMessageError:
       allOf:
-        - $ref: "#/components/schemas/JsonSuccessBase"
+        - $ref: "#/components/schemas/JsonErrorBase"
         - additionalProperties: false
           properties:
             result: {}
             msg: {}
-            raw_content:
-              type: string
-              description: |
-                The raw content of the message.
           example:
             {
               "msg": "Invalid message(s)",

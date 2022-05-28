@@ -10,7 +10,7 @@ from zulip_bots.custom_exceptions import ConfigValidationError
 
 from zerver.actions.realm_settings import do_set_realm_property
 from zerver.actions.streams import do_change_stream_permission
-from zerver.actions.users import do_change_can_create_users, do_deactivate_user
+from zerver.actions.users import do_change_can_create_users, do_change_user_role, do_deactivate_user
 from zerver.lib.bot_config import ConfigError, get_bot_config
 from zerver.lib.bot_lib import get_bot_handler
 from zerver.lib.integrations import EMBEDDED_BOTS, WebhookIntegration
@@ -164,7 +164,7 @@ class BotTest(ZulipTestCase, UploadSerializeMixin):
         self.login("hamlet")
         self.assert_num_bots_equal(0)
         events: List[Mapping[str, Any]] = []
-        with self.tornado_redirected_to_list(events, expected_num_events=4):
+        with self.tornado_redirected_to_list(events, expected_num_events=5):
             result = self.create_bot()
         self.assert_num_bots_equal(1)
 
@@ -330,7 +330,7 @@ class BotTest(ZulipTestCase, UploadSerializeMixin):
         self.login_user(user)
         self.assert_num_bots_equal(0)
         events: List[Mapping[str, Any]] = []
-        with self.tornado_redirected_to_list(events, expected_num_events=4):
+        with self.tornado_redirected_to_list(events, expected_num_events=5):
             result = self.create_bot()
         self.assert_num_bots_equal(1)
 
@@ -422,7 +422,7 @@ class BotTest(ZulipTestCase, UploadSerializeMixin):
 
         self.assert_num_bots_equal(0)
         events: List[Mapping[str, Any]] = []
-        with self.tornado_redirected_to_list(events, expected_num_events=4):
+        with self.tornado_redirected_to_list(events, expected_num_events=5):
             result = self.create_bot(default_sending_stream="Denmark")
         self.assert_num_bots_equal(1)
         self.assertEqual(result["default_sending_stream"], "Denmark")
@@ -496,7 +496,7 @@ class BotTest(ZulipTestCase, UploadSerializeMixin):
 
         self.assert_num_bots_equal(0)
         events: List[Mapping[str, Any]] = []
-        with self.tornado_redirected_to_list(events, expected_num_events=4):
+        with self.tornado_redirected_to_list(events, expected_num_events=5):
             result = self.create_bot(default_events_register_stream="Denmark")
         self.assert_num_bots_equal(1)
         self.assertEqual(result["default_events_register_stream"], "Denmark")
@@ -1168,6 +1168,31 @@ class BotTest(ZulipTestCase, UploadSerializeMixin):
 
         bot = self.get_bot()
         self.assertEqual(None, bot["default_sending_stream"])
+
+    def test_patch_bot_role(self) -> None:
+        self.login("desdemona")
+
+        email = "default-bot@zulip.com"
+        user_profile = self.get_bot_user(email)
+
+        do_change_user_role(user_profile, UserProfile.ROLE_MEMBER, acting_user=user_profile)
+
+        req = dict(role=UserProfile.ROLE_GUEST)
+
+        result = self.client_patch(f"/json/bots/{self.get_bot_user(email).id}", req)
+        self.assert_json_success(result)
+
+        user_profile = self.get_bot_user(email)
+        self.assertEqual(user_profile.role, UserProfile.ROLE_GUEST)
+
+        # Test for not allowing a non-owner user to make assign a bot an owner role
+        desdemona = self.example_user("desdemona")
+        do_change_user_role(desdemona, UserProfile.ROLE_REALM_ADMINISTRATOR, acting_user=None)
+
+        req = dict(role=UserProfile.ROLE_REALM_OWNER)
+
+        result = self.client_patch(f"/json/bots/{self.get_bot_user(email).id}", req)
+        self.assert_json_error(result, "Must be an organization owner")
 
     def test_patch_bot_to_stream_private_allowed(self) -> None:
         self.login("hamlet")

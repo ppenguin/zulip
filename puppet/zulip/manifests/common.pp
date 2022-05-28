@@ -60,39 +60,39 @@ class zulip::common {
 
     # https://go.dev/dl/
     'golang' => {
-      'version' => '1.18.1',
+      'version' => '1.18.2',
       'sha256' => {
-        'amd64'   => 'b3b815f47ababac13810fc6021eb73d65478e0b2db4b09d348eefad9581a2334',
-        'aarch64' => '56a91851c97fb4697077abbca38860f735c32b38993ff79b088dac46e4735633',
+        'amd64'   => 'e54bec97a1a5d230fc2f9ad0880fcbabb5888f30ed9666eca4a91c5a32e86cbc',
+        'aarch64' => 'fc4ad28d0501eaa9c9d6190de3888c9d44d8b5fb02183ce4ae93713f67b8a35b',
       },
     },
 
     # https://github.com/stripe/smokescreen/tags
     'smokescreen-src' => {
-      'version' => 'dbb816b62b790432414db7cafbb4583d5092c601',
+      'version' => 'e196cd61a007e1cdbde5579fe2dac95e7154190c',
       # Source code, so arch-invariant sha256
-      'sha256' => '3c02676af074bf7c18a29343e0824cb87da4837bf7bbe2837ac81c254f813c32',
+      'sha256' => 'bd6126877020c5aab142b26cfa1abde6b25e780f03bd6af25d9fdc85993193fb',
     },
 
     # https://github.com/wal-g/wal-g/releases
     'wal-g' => {
-      'version'       => '1.1.3-rc-with-build',
+      'version'       => '2.0.0',
       'sha256'        => {
-        'amd64' => '109a80f4c019e0f1d52602e90d2a181eb844494ece2d099a149cf9204b71113e',
+        'amd64' => 'df50c0c588fe9ff1638e42763c26e885ea32ad6dc39dee35d547186d3b94a19a',
         # aarch64 builds from source, below
       },
       # This is a Git commit hash, not a sha256sum, for when building from source.
-      'git_commit_id' => '52f990fe87679ee4651fe3fb7629a2ac799f50c6',
+      'git_commit_id' => '1eb88a577d5f938ffc1af9ae8f6ecdf82b7fda6b',
     },
 
     ### zulip_ops packages
 
     # https://grafana.com/grafana/download?edition=oss
     'grafana' => {
-      'version' => '8.5.0',
+      'version' => '8.5.3',
       'sha256' => {
-        'amd64'   => 'ad5e858e2255d69da45f83f9571cf741c6867ed8ccede5ad42e90079119b98aa',
-        'aarch64' => '6e906e0902b88314cd8f5a49c11140398981a7643b268dc04632fc30667581ae',
+        'amd64'   => '94c723358742b7da67323eb8ede32fa51519bca4e907e387f071afd8d8a62220',
+        'aarch64' => '4f1fc74bc8be9799f8461f187d322a168b067cc5a2c40117fbf130c38bc57b5e',
       },
     },
 
@@ -120,6 +120,15 @@ class zulip::common {
       'sha256' => {
         'amd64'   => 'e4546960688d1c85530ec3a93e109d15b540f3251e1f4736d0d9735e1e857faf',
         'aarch64' => '3ebe0c533583a9ab03363a80aa629edd8e0cc42da3583e33958eb7abe74d4cd2',
+      },
+    },
+
+    # https://github.com/oliver006/redis_exporter/releases
+    'redis_exporter' => {
+      'version' => '1.37.0',
+      'sha256' => {
+        'amd64'   => 'c4d0554a378151eab3372235c40d3a9c8c40fd6f40d91d768830985df8a44744',
+        'aarch64' => '742047d938192894979c8370830891bb0fea3262b762e6c51c849a8e47ddfb7e',
       },
     },
 

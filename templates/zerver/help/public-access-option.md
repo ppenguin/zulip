@@ -1,10 +1,5 @@
 # Public access option
 
-!!! warn ""
-
-    This feature is in beta. Contact [support@zulip.com](mailto:support@zulip.com) to
-    enable it for your Zulip Cloud organization.
-
 {!web-public-streams-intro.md!}
 
 Web-public streams are indicated with a globe (<i class="zulip-icon zulip-icon-globe"></i>) icon.
@@ -37,10 +32,9 @@ communities such as open-source projects and research communities.
 ### Enable or disable web-public streams
 
 !!! warn ""
-    Self-hosted Zulip servers must enable support for web-public streams by setting
-    `WEB_PUBLIC_STREAMS_ENABLED = True` in their [server
-    settings](https://zulip.readthedocs.io/en/latest/production/settings.html)
-    prior to proceeding.
+    Self-hosted Zulip servers must enable support for web-public streams in their
+    [server settings](https://zulip.readthedocs.io/en/latest/production/settings.html)
+    by setting `WEB_PUBLIC_STREAMS_ENABLED = True` prior to proceeding.
 
 {start_tabs}
 

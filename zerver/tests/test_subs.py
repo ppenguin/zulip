@@ -75,7 +75,12 @@ from zerver.lib.test_helpers import (
     queries_captured,
     reset_emails_in_zulip_realm,
 )
-from zerver.lib.types import NeverSubscribedStreamDict, SubscriptionInfo
+from zerver.lib.types import (
+    APIStreamDict,
+    APISubscriptionDict,
+    NeverSubscribedStreamDict,
+    SubscriptionInfo,
+)
 from zerver.models import (
     Attachment,
     DefaultStream,
@@ -204,6 +209,32 @@ class TestMiscStuff(ZulipTestCase):
             include_default=False,
         )
         self.assertEqual(streams, [])
+
+    def test_api_fields(self) -> None:
+        """Verify that all the fields from `Stream.API_FIELDS` and `Subscription.API_FIELDS` present
+        in `APIStreamDict` and `APISubscriptionDict`, respectively.
+        """
+        expected_fields = set(Stream.API_FIELDS) | {"stream_id"}
+        expected_fields -= {"id"}
+
+        stream_dict_fields = set(APIStreamDict.__annotations__.keys())
+        computed_fields = set(["is_announcement_only", "is_default"])
+
+        self.assertEqual(stream_dict_fields - computed_fields, expected_fields)
+
+        expected_fields = set(Subscription.API_FIELDS)
+
+        subscription_dict_fields = set(APISubscriptionDict.__annotations__.keys())
+        computed_fields = set(
+            ["in_home_view", "email_address", "stream_weekly_traffic", "subscribers"]
+        )
+        # `APISubscriptionDict` is a subclass of `APIStreamDict`, therefore having all the
+        # fields in addition to the computed fields and `Subscription.API_FIELDS` that
+        # need to be excluded here.
+        self.assertEqual(
+            subscription_dict_fields - computed_fields - stream_dict_fields,
+            expected_fields,
+        )
 
 
 class TestCreateStreams(ZulipTestCase):
@@ -456,7 +487,7 @@ class StreamAdminTest(ZulipTestCase):
         }
         stream_id = get_stream("private_stream_1", user_profile.realm).id
         result = self.client_patch(f"/json/streams/{stream_id}", params)
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         stream = self.subscribe(user_profile, "private_stream_1")
         self.assertFalse(stream.is_in_zephyr_realm)
@@ -1295,7 +1326,7 @@ class StreamAdminTest(ZulipTestCase):
         do_change_user_role(user_profile, UserProfile.ROLE_REALM_ADMINISTRATOR, acting_user=None)
 
         result = self.client_delete("/json/streams/999999999")
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_deactivate_stream_backend_requires_admin(self) -> None:
         user_profile = self.example_user("hamlet")
@@ -1551,7 +1582,7 @@ class StreamAdminTest(ZulipTestCase):
                 "is_private": orjson.dumps(True).decode(),
             },
         )
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_non_admin_cannot_access_unsub_private_stream(self) -> None:
         iago = self.example_user("iago")
@@ -1569,13 +1600,13 @@ class StreamAdminTest(ZulipTestCase):
         stream_id = get_stream("private_stream_1", hamlet.realm).id
 
         result = self.client_patch(f"/json/streams/{stream_id}", {"new_name": "private_stream_2"})
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         result = self.client_patch(
             f"/json/streams/{stream_id}",
             {"description": "new description"},
         )
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         result = self.client_patch(
             f"/json/streams/{stream_id}",
@@ -1583,10 +1614,10 @@ class StreamAdminTest(ZulipTestCase):
                 "is_private": orjson.dumps(True).decode(),
             },
         )
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         result = self.client_delete(f"/json/streams/{stream_id}")
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_change_stream_description(self) -> None:
         user_profile = self.example_user("iago")
@@ -2300,13 +2331,13 @@ class StreamAdminTest(ZulipTestCase):
         stream = self.make_stream("other_realm_stream", realm=other_realm)
 
         result = self.client_delete("/json/streams/" + str(stream.id))
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         # Even becoming a realm admin doesn't help us for an out-of-realm
         # stream.
         do_change_user_role(user_profile, UserProfile.ROLE_REALM_ADMINISTRATOR, acting_user=None)
         result = self.client_delete("/json/streams/" + str(stream.id))
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_delete_public_stream(self) -> None:
         """
@@ -2431,7 +2462,7 @@ class StreamAdminTest(ZulipTestCase):
         those you aren't on.
         """
         result = self.attempt_unsubscribe_of_principal(
-            query_count=16,
+            query_count=14,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=True,
             is_subbed=True,
@@ -2457,7 +2488,7 @@ class StreamAdminTest(ZulipTestCase):
             self.example_user(name) for name in ["cordelia", "prospero", "iago", "hamlet", "ZOE"]
         ]
         result = self.attempt_unsubscribe_of_principal(
-            query_count=31,
+            query_count=25,
             cache_count=9,
             target_users=target_users,
             is_realm_admin=True,
@@ -2475,7 +2506,7 @@ class StreamAdminTest(ZulipTestCase):
         are on.
         """
         result = self.attempt_unsubscribe_of_principal(
-            query_count=17,
+            query_count=15,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=True,
             is_subbed=True,
@@ -2492,7 +2523,7 @@ class StreamAdminTest(ZulipTestCase):
         streams you aren't on.
         """
         result = self.attempt_unsubscribe_of_principal(
-            query_count=17,
+            query_count=15,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=True,
             is_subbed=False,
@@ -2509,7 +2540,7 @@ class StreamAdminTest(ZulipTestCase):
         You can remove others from public streams you're a stream administrator of.
         """
         result = self.attempt_unsubscribe_of_principal(
-            query_count=16,
+            query_count=14,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=False,
             is_stream_admin=True,
@@ -2529,7 +2560,7 @@ class StreamAdminTest(ZulipTestCase):
             self.example_user(name) for name in ["cordelia", "prospero", "othello", "hamlet", "ZOE"]
         ]
         result = self.attempt_unsubscribe_of_principal(
-            query_count=31,
+            query_count=25,
             cache_count=9,
             target_users=target_users,
             is_realm_admin=False,
@@ -2547,7 +2578,7 @@ class StreamAdminTest(ZulipTestCase):
         You can remove others from private streams you're a stream administrator of.
         """
         result = self.attempt_unsubscribe_of_principal(
-            query_count=17,
+            query_count=15,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=False,
             is_stream_admin=True,
@@ -2574,7 +2605,7 @@ class StreamAdminTest(ZulipTestCase):
 
     def test_admin_remove_others_from_stream_legacy_emails(self) -> None:
         result = self.attempt_unsubscribe_of_principal(
-            query_count=16,
+            query_count=14,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=True,
             is_subbed=True,
@@ -2588,7 +2619,7 @@ class StreamAdminTest(ZulipTestCase):
 
     def test_admin_remove_multiple_users_from_stream_legacy_emails(self) -> None:
         result = self.attempt_unsubscribe_of_principal(
-            query_count=20,
+            query_count=17,
             target_users=[self.example_user("cordelia"), self.example_user("prospero")],
             is_realm_admin=True,
             is_subbed=True,
@@ -2606,7 +2637,7 @@ class StreamAdminTest(ZulipTestCase):
         fails gracefully.
         """
         result = self.attempt_unsubscribe_of_principal(
-            query_count=10,
+            query_count=9,
             target_users=[self.example_user("cordelia")],
             is_realm_admin=True,
             is_subbed=False,
@@ -2703,7 +2734,7 @@ class DefaultStreamTest(ZulipTestCase):
         stream = self.make_stream(stream_name, invite_only=True)
         self.subscribe(self.example_user("iago"), stream_name)
         result = self.client_post("/json/default_streams", dict(stream_id=stream.id))
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         # Test admin can't add subscribed private stream also.
         self.subscribe(user_profile, stream_name)
@@ -3452,7 +3483,7 @@ class SubscriptionPropertiesTest(ZulipTestCase):
                 ).decode()
             },
         )
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_set_invalid_property(self) -> None:
         """
@@ -3593,7 +3624,7 @@ class SubscriptionRestApiTest(ZulipTestCase):
             "/api/v1/users/me/subscriptions/121",
             {"property": "is_muted", "value": "somevalue"},
         )
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_bad_add_parameters(self) -> None:
         user = self.example_user("hamlet")
@@ -4667,11 +4698,9 @@ class SubscriptionAPITest(ZulipTestCase):
         self.subscribe(user2, "private_stream")
         self.subscribe(user3, "private_stream")
 
-        # Apart from 3 peer-remove events and 2 unsubscribe event, because `bulk_remove_subscriptions`
-        # also marks are read messages in those streams as read, so emits 8 `message_flags` events too
-        # (for each of the notification bot messages).
+        # Sends 3 peer-remove events and 2 unsubscribe events.
         events: List[Mapping[str, Any]] = []
-        with self.tornado_redirected_to_list(events, expected_num_events=13):
+        with self.tornado_redirected_to_list(events, expected_num_events=5):
             with queries_captured() as query_count:
                 with cache_tries_captured() as cache_count:
                     bulk_remove_subscriptions(
@@ -4681,7 +4710,7 @@ class SubscriptionAPITest(ZulipTestCase):
                         acting_user=None,
                     )
 
-        self.assert_length(query_count, 27)
+        self.assert_length(query_count, 16)
         self.assert_length(cache_count, 3)
 
         peer_events = [e for e in events if e["event"].get("op") == "peer_remove"]
@@ -5459,6 +5488,40 @@ class GetStreamsTest(ZulipTestCase):
         ]
         self.assertEqual(sorted(s["name"] for s in json["streams"]), sorted(all_streams))
 
+    def test_get_single_stream_api(self) -> None:
+        self.login("hamlet")
+        realm = get_realm("zulip")
+        denmark_stream = get_stream("Denmark", realm)
+        result = self.client_get(f"/json/streams/{denmark_stream.id}")
+        self.assert_json_success(result)
+        json = result.json()
+        self.assertEqual(json["stream"]["name"], "Denmark")
+        self.assertEqual(json["stream"]["stream_id"], denmark_stream.id)
+
+        result = self.client_get("/json/streams/9999")
+        self.assert_json_error(result, "Invalid stream ID")
+
+        private_stream = self.make_stream("private_stream", invite_only=True)
+        self.subscribe(self.example_user("cordelia"), "private_stream")
+
+        # Non-admins cannot access unsubscribed private streams.
+        result = self.client_get(f"/json/streams/{private_stream.id}")
+        self.assert_json_error(result, "Invalid stream ID")
+
+        self.login("iago")
+        result = self.client_get(f"/json/streams/{private_stream.id}")
+        self.assert_json_success(result)
+        json = result.json()
+        self.assertEqual(json["stream"]["name"], "private_stream")
+        self.assertEqual(json["stream"]["stream_id"], private_stream.id)
+
+        self.login("cordelia")
+        result = self.client_get(f"/json/streams/{private_stream.id}")
+        self.assert_json_success(result)
+        json = result.json()
+        self.assertEqual(json["stream"]["name"], "private_stream")
+        self.assertEqual(json["stream"]["stream_id"], private_stream.id)
+
 
 class StreamIdTest(ZulipTestCase):
     def test_get_stream_id(self) -> None:
@@ -6006,7 +6069,7 @@ class GetSubscribersTest(ZulipTestCase):
         # Verify another user can't get the data.
         self.login("cordelia")
         result = self.client_get(f"/json/streams/{stream_id}/members")
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         # But an organization administrator can
         self.login("iago")
@@ -6019,7 +6082,7 @@ class GetSubscribersTest(ZulipTestCase):
         """
         stream_id = 99999999
         result = self.client_get(f"/json/streams/{stream_id}/members")
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
     def test_json_get_subscribers(self) -> None:
         """
@@ -6076,7 +6139,7 @@ class GetSubscribersTest(ZulipTestCase):
         # Try to fetch the subscriber list as a non-member & non-realm-admin-user.
         stream_id = get_stream(stream_name, user_profile.realm).id
         result = self.make_subscriber_request(stream_id, user=user_profile)
-        self.assert_json_error(result, "Invalid stream id")
+        self.assert_json_error(result, "Invalid stream ID")
 
         # Try to fetch the subscriber list as a non-member & realm-admin-user.
         self.login("iago")
@@ -6099,7 +6162,7 @@ class AccessStreamTest(ZulipTestCase):
         othello = self.example_user("othello")
 
         # Nobody can access a stream that doesn't exist
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(hamlet, 501232)
         with self.assertRaisesRegex(JsonableError, "Invalid stream name 'invalid stream'"):
             access_stream_by_name(hamlet, "invalid stream")
@@ -6114,7 +6177,7 @@ class AccessStreamTest(ZulipTestCase):
         self.assertEqual(sub_ret, sub_ret2)
 
         # Othello cannot access the private stream
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(othello, stream.id)
         with self.assertRaisesRegex(JsonableError, "Invalid stream name 'new_private_stream'"):
             access_stream_by_name(othello, stream.name)
@@ -6133,17 +6196,17 @@ class AccessStreamTest(ZulipTestCase):
         mit_realm = get_realm("zephyr")
         mit_stream = ensure_stream(mit_realm, "mit_stream", invite_only=False, acting_user=None)
         sipbtest = self.mit_user("sipbtest")
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(hamlet, mit_stream.id)
         with self.assertRaisesRegex(JsonableError, "Invalid stream name 'mit_stream'"):
             access_stream_by_name(hamlet, mit_stream.name)
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(sipbtest, stream.id)
         with self.assertRaisesRegex(JsonableError, "Invalid stream name 'new_private_stream'"):
             access_stream_by_name(sipbtest, stream.name)
 
         # MIT realm users cannot access even public streams in their realm
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(sipbtest, mit_stream.id)
         with self.assertRaisesRegex(JsonableError, "Invalid stream name 'mit_stream'"):
             access_stream_by_name(sipbtest, mit_stream.name)
@@ -6160,7 +6223,7 @@ class AccessStreamTest(ZulipTestCase):
         stream = self.make_stream(stream_name, guest_user_profile.realm, invite_only=False)
 
         # Guest user don't have access to unsubscribed public streams
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(guest_user_profile, stream.id)
 
         # Guest user have access to subscribed public streams
@@ -6173,7 +6236,7 @@ class AccessStreamTest(ZulipTestCase):
         stream_name = "private_stream_1"
         stream = self.make_stream(stream_name, guest_user_profile.realm, invite_only=True)
         # Obviously, a guest user doesn't have access to unsubscribed private streams either
-        with self.assertRaisesRegex(JsonableError, "Invalid stream id"):
+        with self.assertRaisesRegex(JsonableError, "Invalid stream ID"):
             access_stream_by_id(guest_user_profile, stream.id)
 
         # Guest user have access to subscribed private streams
